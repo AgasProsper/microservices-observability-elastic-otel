@@ -1,0 +1,69 @@
+mode: deployment
+namespaceOverride: default
+
+image:
+  repository: "otel/opentelemetry-collector-contrib"
+  tag: "0.93.0"
+
+service:
+  type: ClusterIP
+
+config:
+  receivers:
+    otlp:
+      protocols:
+        grpc:
+          endpoint: ${env:MY_POD_IP}:4317
+        http:
+          endpoint: ${env:MY_POD_IP}:4318
+
+  processors:
+    batch:
+      send_batch_size: 1000
+      timeout: 10s
+    memory_limiter:
+      check_interval: 1s
+      limit_percentage: 75
+      spike_limit_percentage: 15
+    tail_sampling:
+      decision_wait: 10s
+      num_traces: 10000
+      expected_new_traces_per_sec: 100
+      policies:
+        [
+          {
+            name: errors-policy,
+            type: status_code,
+            status_code: {status_codes: [ERROR]}
+          },
+          {
+            name: randomized-policy,
+            type: probabilistic,
+            probabilistic: {sampling_percentage: 10}
+          }
+        ]
+
+  exporters:
+    otlp/elastic:
+      endpoint: "apm-server-apm-http.default.svc.cluster.local:8200"
+      tls:
+        insecure: true
+      headers:
+        Authorization: "Bearer ${env:ELASTIC_APM_SECRET_TOKEN}"
+    logging:
+      verbosity: info
+
+  service:
+    pipelines:
+      traces:
+        receivers: [otlp]
+        processors: [memory_limiter, tail_sampling, batch]
+        exporters: [otlp/elastic, logging]
+      metrics:
+        receivers: [otlp]
+        processors: [memory_limiter, batch]
+        exporters: [otlp/elastic, logging]
+      logs:
+        receivers: [otlp]
+        processors: [memory_limiter, batch]
+        exporters: [otlp/elastic, logging]

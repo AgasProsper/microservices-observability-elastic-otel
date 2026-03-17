@@ -1,0 +1,108 @@
+# Kibana Alerting Rules Export (NDJSON format)
+# Import via Kibana → Stack Management → Saved Objects → Import
+# Or via: POST /api/alerting/rule
+
+# ─── RULE 1: High Error Rate ────────────────────────────────────────────────
+# Fires when any service error rate > 5% over a 5-minute window
+{
+  "id": "rule-high-error-rate",
+  "name": "[MTN] High Service Error Rate",
+  "tags": ["mtn", "sre", "apm"],
+  "alertTypeId": ".es-query",
+  "consumer": "alerts",
+  "schedule": { "interval": "1m" },
+  "params": {
+    "index": ["apm-*"],
+    "timeField": "@timestamp",
+    "timeWindowSize": 5,
+    "timeWindowUnit": "m",
+    "thresholdComparator": ">",
+    "threshold": [50],
+    "esQuery": "{ \"query\": { \"bool\": { \"filter\": [{ \"term\": { \"transaction.outcome\": \"failure\" } }] } } }"
+  },
+  "actions": []
+}
+
+# ─── RULE 2: High Latency ───────────────────────────────────────────────────
+# Fires when P95 transaction latency exceeds 2000ms (2 seconds)
+{
+  "id": "rule-high-latency",
+  "name": "[MTN] High P95 Latency (>2s)",
+  "tags": ["mtn", "sre", "latency"],
+  "alertTypeId": ".es-query",
+  "consumer": "alerts",
+  "schedule": { "interval": "2m" },
+  "params": {
+    "index": ["apm-*"],
+    "timeField": "@timestamp",
+    "timeWindowSize": 5,
+    "timeWindowUnit": "m",
+    "thresholdComparator": ">",
+    "threshold": [0],
+    "esQuery": "{ \"query\": { \"bool\": { \"filter\": [{ \"range\": { \"transaction.duration.us\": { \"gt\": 2000000 } } }] } } }"
+  },
+  "actions": []
+}
+
+# ─── RULE 3: Redis Memory Usage ─────────────────────────────────────────────
+# Fires when Redis used_memory exceeds 80% of max
+{
+  "id": "rule-redis-memory",
+  "name": "[MTN] Redis Memory High (>80%)",
+  "tags": ["mtn", "infra", "redis"],
+  "alertTypeId": ".es-query",
+  "consumer": "alerts",
+  "schedule": { "interval": "5m" },
+  "params": {
+    "index": ["metricbeat-*"],
+    "timeField": "@timestamp",
+    "timeWindowSize": 10,
+    "timeWindowUnit": "m",
+    "thresholdComparator": ">",
+    "threshold": [80],
+    "esQuery": "{ \"query\": { \"bool\": { \"filter\": [{ \"term\": { \"service.type\": \"redis\" } }] } }, \"aggs\": { \"mem_pct\": { \"avg\": { \"script\": { \"source\": \"doc['redis.info.memory.used.bytes'].value / doc['redis.info.memory.max.bytes'].value * 100\" } } } } }"
+  },
+  "actions": []
+}
+
+# ─── RULE 4: Payment Service Down ───────────────────────────────────────────
+# Fires when paymentservice returns 0 transactions in 5 minutes (potential outage)
+{
+  "id": "rule-payment-service-down",
+  "name": "[MTN] Payment Service No Transactions",
+  "tags": ["mtn", "sre", "payment", "critical"],
+  "alertTypeId": ".es-query",
+  "consumer": "alerts",
+  "schedule": { "interval": "5m" },
+  "params": {
+    "index": ["apm-*"],
+    "timeField": "@timestamp",
+    "timeWindowSize": 5,
+    "timeWindowUnit": "m",
+    "thresholdComparator": "<",
+    "threshold": [1],
+    "esQuery": "{ \"query\": { \"bool\": { \"filter\": [{ \"term\": { \"service.name\": \"paymentservice\" } }, { \"term\": { \"processor.event\": \"transaction\" } }] } } }"
+  },
+  "actions": []
+}
+
+# ─── RULE 5: Node CPU High ──────────────────────────────────────────────────
+# Fires when host CPU usage exceeds 85% on any cluster node
+{
+  "id": "rule-node-cpu-high",
+  "name": "[MTN] Node CPU > 85%",
+  "tags": ["mtn", "infra", "compute"],
+  "alertTypeId": ".es-query",
+  "consumer": "alerts",
+  "schedule": { "interval": "2m" },
+  "params": {
+    "index": ["metricbeat-*"],
+    "timeField": "@timestamp",
+    "timeWindowSize": 5,
+    "timeWindowUnit": "m",
+    "thresholdComparator": ">",
+    "threshold": [85],
+    "esQuery": "{ \"query\": { \"bool\": { \"filter\": [{ \"term\": { \"metricset.name\": \"cpu\" } }] } }, \"aggs\": { \"avg_cpu\": { \"avg\": { \"field\": \"system.cpu.total.pct\" } } } }"
+  },
+  "actions": []
+}

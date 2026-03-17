@@ -1,0 +1,93 @@
+# Metricbeat Deployment for structured database monitoring
+# Targets: Redis (already in cluster), PostgreSQL
+# This complements the Elastic Agent DaemonSet for database-specific metrics.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: metricbeat-db
+  namespace: monitoring
+  labels:
+    app: metricbeat-db
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: metricbeat-db
+  template:
+    metadata:
+      labels:
+        app: metricbeat-db
+    spec:
+      serviceAccountName: elastic-agent
+      containers:
+        - name: metricbeat
+          image: docker.elastic.co/beats/metricbeat:8.12.0
+          args:
+            - "-c"
+            - "/etc/metricbeat.yml"
+            - "-e"
+          env:
+            - name: ELASTICSEARCH_HOST
+              value: "https://quickstart-es-http.default.svc.cluster.local:9200"
+            - name: ELASTICSEARCH_USER
+              value: "elastic"
+            - name: ELASTICSEARCH_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: quickstart-es-elastic-user
+                  key: elastic
+          resources:
+            limits:
+              memory: 200Mi
+            requests:
+              cpu: 50m
+              memory: 100Mi
+          volumeMounts:
+            - name: config
+              mountPath: /etc/metricbeat.yml
+              subPath: metricbeat.yml
+              readOnly: true
+      volumes:
+        - name: config
+          configMap:
+            name: metricbeat-db-config
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: metricbeat-db-config
+  namespace: monitoring
+data:
+  metricbeat.yml: |
+    metricbeat.modules:
+
+    # Redis monitoring — tracks connected clients, memory, ops/sec
+    - module: redis
+      metricsets:
+        - info
+        - keyspace
+      period: 10s
+      hosts:
+        - "redis-cart.boutique.svc.cluster.local:6379"
+      enabled: true
+
+    # PostgreSQL monitoring (if deployed; adjust host/password as needed)
+    - module: postgresql
+      metricsets:
+        - database
+        - bgwriter
+        - activity
+      period: 10s
+      hosts:
+        - "postgres://postgres:${PG_PASSWORD}@postgres.boutique.svc.cluster.local:5432/postgres?sslmode=disable"
+      enabled: false
+
+    output.elasticsearch:
+      hosts: ["${ELASTICSEARCH_HOST}"]
+      username: "${ELASTICSEARCH_USER}"
+      password: "${ELASTICSEARCH_PASSWORD}"
+      ssl.verification_mode: none
+
+    setup.kibana:
+      host: "https://quickstart-kb-http.default.svc.cluster.local:5601"
+      ssl.verification_mode: none

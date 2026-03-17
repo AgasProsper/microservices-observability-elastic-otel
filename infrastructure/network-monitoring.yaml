@@ -1,0 +1,182 @@
+# Packetbeat DaemonSet for Network Flow Monitoring
+# Captures TCP/UDP flows and correlates with Calico network events
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: packetbeat
+  namespace: monitoring
+  labels:
+    app: packetbeat
+spec:
+  selector:
+    matchLabels:
+      app: packetbeat
+  template:
+    metadata:
+      labels:
+        app: packetbeat
+    spec:
+      serviceAccountName: elastic-agent
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      containers:
+        - name: packetbeat
+          image: docker.elastic.co/beats/packetbeat:8.12.0
+          args:
+            - "-c"
+            - "/etc/packetbeat.yml"
+            - "-e"
+          env:
+            - name: ELASTICSEARCH_HOST
+              value: "https://quickstart-es-http.default.svc.cluster.local:9200"
+            - name: ELASTICSEARCH_USER
+              value: "elastic"
+            - name: ELASTICSEARCH_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: quickstart-es-elastic-user
+                  key: elastic
+          securityContext:
+            runAsUser: 0
+            capabilities:
+              add:
+                - NET_ADMIN
+                - NET_RAW
+          resources:
+            limits:
+              memory: 200Mi
+            requests:
+              cpu: 100m
+              memory: 100Mi
+          volumeMounts:
+            - name: config
+              mountPath: /etc/packetbeat.yml
+              subPath: packetbeat.yml
+              readOnly: true
+      volumes:
+        - name: config
+          configMap:
+            name: packetbeat-config
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: packetbeat-config
+  namespace: monitoring
+data:
+  packetbeat.yml: |
+    packetbeat.interfaces.device: any
+
+    # Capture inter-service gRPC/HTTP traffic
+    packetbeat.protocols:
+      - type: http
+        ports: [80, 8080, 8081, 3550, 7070, 5050, 50051, 9555]
+      - type: grpc
+        ports: [4317, 4318, 7070, 3550, 5050, 50051]
+
+    # Network flow metrics
+    packetbeat.flows:
+      timeout: 30s
+      period: 10s
+
+    output.elasticsearch:
+      hosts: ["${ELASTICSEARCH_HOST}"]
+      username: "${ELASTICSEARCH_USER}"
+      password: "${ELASTICSEARCH_PASSWORD}"
+      ssl.verification_mode: none
+
+    processors:
+      - add_kubernetes_metadata:
+          in_cluster: true
+---
+# Filebeat DaemonSet for Calico network policy log collection
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: filebeat-calico
+  namespace: monitoring
+  labels:
+    app: filebeat-calico
+spec:
+  selector:
+    matchLabels:
+      app: filebeat-calico
+  template:
+    metadata:
+      labels:
+        app: filebeat-calico
+    spec:
+      serviceAccountName: elastic-agent
+      containers:
+        - name: filebeat
+          image: docker.elastic.co/beats/filebeat:8.12.0
+          args:
+            - "-c"
+            - "/etc/filebeat.yml"
+            - "-e"
+          env:
+            - name: ELASTICSEARCH_HOST
+              value: "https://quickstart-es-http.default.svc.cluster.local:9200"
+            - name: ELASTICSEARCH_USER
+              value: "elastic"
+            - name: ELASTICSEARCH_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: quickstart-es-elastic-user
+                  key: elastic
+          resources:
+            limits:
+              memory: 100Mi
+            requests:
+              cpu: 50m
+              memory: 50Mi
+          volumeMounts:
+            - name: config
+              mountPath: /etc/filebeat.yml
+              subPath: filebeat.yml
+              readOnly: true
+            - name: varlog
+              mountPath: /var/log
+              readOnly: true
+      volumes:
+        - name: config
+          configMap:
+            name: filebeat-calico-config
+        - name: varlog
+          hostPath:
+            path: /var/log
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: filebeat-calico-config
+  namespace: monitoring
+data:
+  filebeat.yml: |
+    filebeat.inputs:
+      # Calico network policy deny logs
+      - type: log
+        enabled: true
+        paths:
+          - /var/log/calico/cni/*.log
+          - /var/log/calico/*.log
+        tags: ["calico", "network-policy"]
+        processors:
+          - add_kubernetes_metadata:
+              in_cluster: true
+
+      # NGINX Ingress access and error logs
+      - type: container
+        enabled: true
+        paths:
+          - /var/log/containers/*nginx*.log
+        tags: ["nginx", "ingress"]
+        processors:
+          - add_kubernetes_metadata:
+              in_cluster: true
+
+    output.elasticsearch:
+      hosts: ["${ELASTICSEARCH_HOST}"]
+      username: "${ELASTICSEARCH_USER}"
+      password: "${ELASTICSEARCH_PASSWORD}"
+      ssl.verification_mode: none
