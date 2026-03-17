@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: emailservice
+  namespace: boutique
+spec:
+  template:
+    spec:
+      containers:
+      - name: server
+        resources:
+          limits:
+            memory: 256Mi
+          requests:
+            memory: 128Mi
+        livenessProbe:
+          initialDelaySeconds: 60
+          periodSeconds: 15
+          timeoutSeconds: 5
+        readinessProbe:
+          initialDelaySeconds: 15
+          periodSeconds: 10
+          timeoutSeconds: 5
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: recommendationservice
+  namespace: boutique
+spec:
+  template:
+    spec:
+      containers:
+      - name: server
+        resources:
+          limits:
+            memory: 512Mi
+          requests:
+            memory: 256Mi
+        livenessProbe:
+          initialDelaySeconds: 60
+          periodSeconds: 15
+          timeoutSeconds: 5
+        readinessProbe:
+          initialDelaySeconds: 15
+          periodSeconds: 10
+          timeoutSeconds: 5

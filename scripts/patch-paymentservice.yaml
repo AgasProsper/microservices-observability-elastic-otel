@@ -1,0 +1,33 @@
+spec:
+  template:
+    spec:
+      containers:
+        - name: server
+          resources:
+            limits:
+              memory: 512Mi
+            requests:
+              memory: 256Mi
+          env:
+            - name: PORT
+              value: "50051"
+            - name: DISABLE_PROFILER
+              value: "1"
+            - name: ENABLE_TRACING
+              value: "1"
+            - name: COLLECTOR_SERVICE_ADDR
+              value: "opentelemetry-collector-gateway.default.svc.cluster.local:4317"
+            - name: OTEL_SERVICE_NAME
+              value: "paymentservice"
+          livenessProbe:
+            grpc:
+              port: 50051
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            timeoutSeconds: 5
+          readinessProbe:
+            grpc:
+              port: 50051
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5

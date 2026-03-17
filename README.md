@@ -1,18 +1,30 @@
-# MTN SRE Practical Assessment
+# Microservices Observability (Elastic + OTel)
 
-This repository contains the configuration and implementation for the MTN SRE Practical Assessment, focusing on deploying an observability and infrastructure monitoring stack using **OpenTelemetry** and the **Elastic Stack**. 
+This repository contains the professional-grade implementation of the MTN SRE Practical Assessment. It demonstrates a complete observability and infrastructure monitoring stack using **OpenTelemetry** and the **Elastic Stack** (ECK).
 
 The target application is the **Google Online Boutique** microservices running on a local Minikube cluster.
 
-## Repository Structure
+## 🏗️ Architectural Overview
 
-*   **/otel-collector**: Helm values and configs for the OpenTelemetry Collector Gateway & Agent topology.
-*   **/instrumentation**: Code and manifest modifications for instrumenting the `frontend`, `cartservice`, and `paymentservice`.
-*   **/rum**: Browser SDK integration for Real User Monitoring.
-*   **/dashboards**: Exported Kibana Saved Objects containing operational dashboards.
-*   **/infrastructure**: Elastic Agent/Beat configurations and exported Kibana Alerting Rules for comprehensive infrastructure monitoring.
-*   **/docs**: Architectural decision logs (`DECISIONS.md`).
+- **Collector Topology**: OTel Gateway (Deployment) + OTel Agent (DaemonSet).
+- **Traces**: 10% probabilistic sampling + 100% error sampling.
+- **Microservices**: Fully instrumented Go (Frontend), .NET (Cart), and Node.js (Payment) services.
+- **RUM**: Real User Monitoring injected via OTel/Elastic JS SDK.
+- **Infra Monitoring**: Elastic Agent (DaemonSet) + Beats (Metricbeat for Redis/NGINX, Filebeat for Logs).
 
-## Setup Instructions
+## 📂 Repository Structure
 
-*(To be populated as implementation proceeds)*
+*   **/otel-collector**: Helm values for the Gateway/Agent topology.
+*   **/microservices-demo**: Instrumented source code for the Boutique app.
+*   **/rum**: Elastic RUM configuration for the frontend.
+*   **/dashboards**: NDJSON files for Kibana (Service Health, RUM, Business Transactions).
+*   **/infrastructure**: YAMLs for Elastic Agent, Beats, and Alerting Rules.
+*   **/scripts**: Stability patches (Resource limits, node selectors, gRPC probes).
+*   **/docs**: Architectural Decision Logs (`DECISIONS.md`).
+
+## 🚀 Final Verification
+
+1.  **Pod Health**: `kubectl get pods -A` (All services should be `1/1 Running`).
+2.  **Traffic**: `loadgenerator` is active and generating realistic user flows.
+3.  **Telemetry**: Traces and metrics are flowing into the Elastic APM Server.
+4.  **Dashboards**: Import NDJSON files into Kibana to view live health metrics.
