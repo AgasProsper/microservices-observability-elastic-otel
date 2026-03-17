@@ -20,8 +20,9 @@
     "@opentelemetry/sdk-node": "0.211.0",
     "@opentelemetry/resources": "2.5.0",
     "@opentelemetry/semantic-conventions": "1.39.0",
-    "@opentelemetry/sdk-metrics": "1.39.0",
-    "@opentelemetry/exporter-metrics-otlp-grpc": "0.14.0",
+    "@opentelemetry/sdk-metrics": "1.25.1",
+    "@opentelemetry/exporter-metrics-otlp-grpc": "0.52.1",
+    "@opentelemetry/exporter-trace-otlp-grpc": "0.52.1",
     "pino": "10.3.0",
     "simple-card-validator": "^1.1.0",
     "uuid": "^13.0.0"

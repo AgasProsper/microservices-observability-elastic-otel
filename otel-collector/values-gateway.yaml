@@ -48,10 +48,11 @@ config:
       endpoint: "http://apm-server-apm-http.default.svc.cluster.local:8200"
       tls:
         insecure: true
-    logging:
-      verbosity: detailed
 
   service:
+    telemetry:
+      metrics:
+        address: ${env:MY_POD_IP}:8888
     pipelines:
       traces:
         receivers: [otlp]

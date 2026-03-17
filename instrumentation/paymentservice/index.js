@@ -43,6 +43,7 @@ if (process.env.ENABLE_TRACING == "1") {
   const opentelemetry = require('@opentelemetry/sdk-node');
 
   const { OTLPMetricExporter } = require('@opentelemetry/exporter-metrics-otlp-grpc');
+  const { OTLPTraceExporter } = require('@opentelemetry/exporter-trace-otlp-grpc');
   const { PeriodicExportingMetricReader } = require('@opentelemetry/sdk-metrics');
   const { ATTR_SERVICE_VERSION, ATTR_DEPLOYMENT_ENVIRONMENT } = require('@opentelemetry/semantic-conventions');
 
