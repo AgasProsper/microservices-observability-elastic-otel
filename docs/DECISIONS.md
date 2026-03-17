@@ -1,6 +1,6 @@
 # Architectural Decision Log
 
-This document records the architectural decisions made during the setup and implementation of the MTN SRE Practical Assessment.
+This document records the architectural decisions made during the setup and implementation of the SRE Practical Assessment.
 
 ## 1. Environment Details
 *   **Kubernetes Environment:** Minikube (2+ nodes as required).

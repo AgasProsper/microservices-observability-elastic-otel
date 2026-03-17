@@ -1,6 +1,6 @@
 # Microservices Observability (Elastic + OTel)
 
-This repository contains the professional-grade implementation of the MTN SRE Practical Assessment. It demonstrates a complete observability and infrastructure monitoring stack using **OpenTelemetry** and the **Elastic Stack** (ECK).
+This repository contains a professional-grade implementation of a Distributed Observability Stack. It demonstrates a complete observability and infrastructure monitoring solution using **OpenTelemetry** and the **Elastic Stack** (ECK).
 
 The target application is the **Google Online Boutique** microservices running on a local Minikube cluster.
 
