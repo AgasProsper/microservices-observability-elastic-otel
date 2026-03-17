@@ -66,7 +66,7 @@ config:
       tls:
         insecure: true
     logging:
-      verbosity: info
+      verbosity: detailed
 
   service:
     pipelines:
