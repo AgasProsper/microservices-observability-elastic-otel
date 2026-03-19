@@ -1,0 +1,22 @@
+spec:
+  template:
+    spec:
+      initContainers:
+      - name: frontend-check
+        command:
+        - /bin/sh
+        - -exc
+        - |
+          MAX_RETRIES=20
+          RETRY_INTERVAL=10
+          for i in $(seq 1 $MAX_RETRIES); do
+            echo "Attempt $i: Pinging frontend: ${FRONTEND_ADDR}..."
+            if wget -q --spider http://${FRONTEND_ADDR}; then
+                echo "Frontend is reachable."
+                exit 0
+            fi
+            echo "Error: Could not reach frontend"
+            sleep $RETRY_INTERVAL
+          done
+          echo "Failed to reach frontend after $MAX_RETRIES attempts."
+          exit 1

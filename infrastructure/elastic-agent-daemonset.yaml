@@ -3,8 +3,49 @@ kind: Namespace
 metadata:
   name: monitoring
 ---
-# Elastic Agent DaemonSet for Infrastructure Monitoring
-# Collects: system metrics, logs, network stats from every Minikube node
+# Standalone Elastic Agent as a DaemonSet
+# Bypasses Fleet — sends metrics/logs directly to Elasticsearch via env vars
+# Covers: host metrics, Kubernetes state, container logs
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: elastic-agent-config
+  namespace: monitoring
+data:
+  elastic-agent.yml: |
+    outputs:
+      default:
+        type: elasticsearch
+        hosts:
+          - https://quickstart-es-http.default.svc.cluster.local:9200
+        username: elastic
+        password: "${ELASTICSEARCH_PASSWORD}"
+        ssl.verification_mode: none
+
+    inputs:
+      - id: kubernetes-cluster-metrics
+        type: kubernetes/metrics
+        streams:
+          - metricsets: [node, pod, container, namespace, deployment, daemonset, statefulset, persistentvolume, persistentvolumeclaim, service, cronjob, job]
+            period: 10s
+
+      - id: system-metrics
+        type: system/metrics
+        streams:
+          - metricsets: [cpu, memory, network, diskio, load, filesystem, process, process_summary]
+            period: 10s
+
+      - id: kubernetes-container-logs
+        type: filestream
+        paths:
+          - /var/log/containers/*.log
+        processors:
+          - add_kubernetes_metadata:
+              host: "${NODE_NAME}"
+              matchers:
+                - logs_path:
+                    logs_path: /var/log/containers/
+---
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
@@ -25,24 +66,13 @@ spec:
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
       tolerations:
-        - key: node-role.kubernetes.io/control-plane
-          effect: NoSchedule
+        - effect: NoSchedule
+          operator: Exists
       containers:
         - name: elastic-agent
           image: docker.elastic.co/beats/elastic-agent:8.12.0
+          args: ["-e", "-c", "/etc/elastic-agent/elastic-agent.yml"]
           env:
-            - name: FLEET_SERVER_URL
-              value: "https://fleet-server.default.svc.cluster.local:8220"
-            - name: FLEET_ENROLLMENT_TOKEN
-              valueFrom:
-                secretKeyRef:
-                  name: elastic-agent-enrollment
-                  key: token
-                  optional: true
-            - name: ELASTIC_APM_SERVER_URL
-              value: "http://apm-server-apm-http.default.svc.cluster.local:8200"
-            - name: FLEET_INSECURE
-              value: "true"
             - name: NODE_NAME
               valueFrom:
                 fieldRef:
@@ -51,15 +81,22 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.name
+            - name: ELASTICSEARCH_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: elastic-agent-es-secret
+                  key: password
           securityContext:
             runAsUser: 0
           resources:
             limits:
-              memory: 400Mi
+              memory: 500Mi
             requests:
               cpu: 100m
               memory: 200Mi
           volumeMounts:
+            - name: config
+              mountPath: /etc/elastic-agent
             - name: proc
               mountPath: /hostfs/proc
               readOnly: true
@@ -76,6 +113,9 @@ spec:
               mountPath: /etc/machine-id
               readOnly: true
       volumes:
+        - name: config
+          configMap:
+            name: elastic-agent-config
         - name: proc
           hostPath:
             path: /proc
@@ -112,13 +152,21 @@ rules:
       - services
       - endpoints
       - events
+      - persistentvolumes
+      - persistentvolumeclaims
     verbs: ["get", "list", "watch"]
   - apiGroups: ["apps"]
     resources:
       - replicasets
       - deployments
       - daemonsets
+      - statefulsets
     verbs: ["get", "list", "watch"]
+  - apiGroups: ["batch"]
+    resources: [jobs, cronjobs]
+    verbs: ["get", "list", "watch"]
+  - nonResourceURLs: ["/metrics"]
+    verbs: ["get"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding

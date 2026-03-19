@@ -1,0 +1,20 @@
+apiVersion: eksctl.io/v1alpha5
+kind: ClusterConfig
+
+metadata:
+  name: mtn-observability-cluster
+  region: us-east-1
+  version: "1.30"
+
+managedNodeGroups:
+  - name: spot-nodes
+    instanceTypes: ["t3.medium", "t3a.medium"]
+    spot: true
+    minSize: 2
+    maxSize: 3
+    volumeSize: 50
+    iam:
+      withAddonPolicies:
+        autoScaler: true
+        ebs: true
+        cloudWatch: true

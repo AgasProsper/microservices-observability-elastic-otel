@@ -1,0 +1,71 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: opentelemetry-collector-gateway
+  namespace: default
+data:
+  relay: |
+    exporters:
+      debug: 
+        verbosity: detailed
+      otlphttp/elastic:
+        endpoint: https://10.244.0.65:8200
+        timeout: 30s
+        headers:
+          Authorization: "Bearer 2WIgfggTE2Z6y2K7q7Q9969Z"
+        tls:
+          insecure: false
+          insecure_skip_verify: true
+    extensions:
+      health_check:
+        endpoint: ${env:MY_POD_IP}:13133
+    processors:
+      batch:
+        send_batch_size: 5000
+        timeout: 10s
+      memory_limiter:
+        check_interval: 1s
+        limit_percentage: 75
+        spike_limit_percentage: 15
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: ${env:MY_POD_IP}:4317
+          http:
+            endpoint: ${env:MY_POD_IP}:4318
+    service:
+      extensions:
+      - health_check
+      pipelines:
+        logs:
+          exporters:
+          - otlphttp/elastic
+          processors:
+          - memory_limiter
+          - batch
+          receivers:
+          - otlp
+        metrics:
+          exporters:
+          - otlphttp/elastic
+          processors:
+          - memory_limiter
+          - batch
+          receivers:
+          - otlp
+        traces:
+          exporters:
+          - otlphttp/elastic
+          - debug
+          processors: [memory_limiter, batch]
+          receivers:
+          - otlp
+      telemetry:
+        metrics:
+          readers:
+          - pull:
+              exporter:
+                prometheus:
+                  host: ${env:MY_POD_IP}
+                  port: 8889

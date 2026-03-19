@@ -62,7 +62,7 @@ config:
 
   exporters:
     otlp/gateway:
-      endpoint: "opentelemetry-collector-gateway.default.svc.cluster.local:4317"
+      endpoint: "otel-gateway-opentelemetry-collector.default.svc.cluster.local:4317"
       tls:
         insecure: true
     logging:

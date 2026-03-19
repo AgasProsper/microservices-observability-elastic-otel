@@ -12,6 +12,7 @@ spec:
       node.store.allow_mmap: false
     podTemplate:
       spec:
+
         containers:
         - name: elasticsearch
           resources:
@@ -34,6 +35,7 @@ spec:
     name: quickstart
   podTemplate:
     spec:
+
       containers:
       - name: kibana
         resources:
@@ -56,8 +58,13 @@ spec:
     name: quickstart
   kibanaRef:
     name: quickstart
+  http:
+    service:
+      spec:
+        type: LoadBalancer
   podTemplate:
     spec:
+
       containers:
       - name: apm-server
         resources:

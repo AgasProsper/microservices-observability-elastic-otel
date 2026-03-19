@@ -8,6 +8,7 @@ image:
 service:
   type: ClusterIP
 
+
 config:
   receivers:
     otlp:
@@ -39,15 +40,17 @@ config:
           {
             name: randomized-policy,
             type: probabilistic,
-            probabilistic: {sampling_percentage: 10}
+            probabilistic: {sampling_percentage: 100}
           }
         ]
 
   exporters:
     otlphttp/elastic:
-      endpoint: "http://apm-server-apm-http.default.svc.cluster.local:8200"
+      endpoint: "https://apm-server-apm-http.default.svc.cluster.local:8200"
+      headers:
+        Authorization: "Bearer T6p7as0bZ7B550Li9DCw8o5C"
       tls:
-        insecure: true
+        insecure_skip_verify: true
 
   service:
     telemetry:

@@ -1,0 +1,13 @@
+spec:
+  template:
+    spec:
+      containers:
+      - name: server
+        volumeMounts:
+        - name: templates-override
+          mountPath: /src/templates/header.html
+          subPath: header.html
+      volumes:
+      - name: templates-override
+        configMap:
+          name: frontend-templates
