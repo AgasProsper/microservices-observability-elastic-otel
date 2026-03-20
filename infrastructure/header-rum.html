@@ -49,10 +49,10 @@
     <script>
       elasticApm.init({
         serviceName: 'frontend-browser',
-        serverUrl: 'https://a378b290e00234b92a8a7cf4ce91f754-1998752709.us-east-1.elb.amazonaws.com:8200',
+        serverUrl: 'http://a4e911deda0e041e5b2cd2207d686a8f-661329308.us-east-1.elb.amazonaws.com/apm',
         serviceVersion: '1.0.0',
         environment: 'production',
-        distributedTracingOrigins: [window.location.origin, 'https://a378b290e00234b92a8a7cf4ce91f754-1998752709.us-east-1.elb.amazonaws.com:8200']
+        distributedTracingOrigins: [window.location.origin, 'http://a4e911deda0e041e5b2cd2207d686a8f-661329308.us-east-1.elb.amazonaws.com']
       })
     </script>
 </head>

@@ -1,10 +1,10 @@
-# Microservices Observability on AWS EKS: Professional Implementation
+# Microservices Observability on AWS EKS: Professional Implementation (Consolidated)
 
-This repository contains a full, "Excellent" tier implementation of an observability pipeline for the **Google Online Boutique** microservices running on **Amazon EKS**. 
+This repository contains a full, "Excellent" tier implementation of an observability pipeline for the **Google Online Boutique** microservices running on **Amazon EKS**, consolidated under a single ingress point.
 
 ---
 
-## 🏗️ 1. Application Overview: The Google Online Boutique
+## 🏛️ 1. Application Overview: The Google Online Boutique
 The **Google Online Boutique** is a cloud-native, polyglot application consisting of 12 microservices. These services work together to simulate a production e-commerce platform:
 
 | Service | Language | Description |
@@ -45,65 +45,59 @@ We've implemented a robust, **OpenTelemetry-native** pipeline that feeds into th
 
 ---
 
-## 🏛️ 3. Detailed Architecture & Data Flow
+## 🏛️ 3. Access URLs (One LoadBalancer for Everything)
+By implementing an **NGINX Ingress Controller**, we've consolidated all services into a single, cost-effective entry point.
+
+| Target | URL | Port |
+| :--- | :--- | :--- |
+| **🛒 Storefront** | [http://a4e911deda0e041e5b2cd2207d686a8f-661329308.us-east-1.elb.amazonaws.com](http://a4e911deda0e041e5b2cd2207d686a8f-661329308.us-east-1.elb.amazonaws.com) | 80 |
+| **📊 Kibana Dashboards** | [http://a4e911deda0e041e5b2cd2207d686a8f-661329308.us-east-1.elb.amazonaws.com/kibana](http://a4e911deda0e041e5b2cd2207d686a8f-661329308.us-east-1.elb.amazonaws.com/kibana) | 80 |
+| **📡 APM Server (RUM)** | [http://a4e911deda0e041e5b2cd2207d686a8f-661329308.us-east-1.elb.amazonaws.com/apm](http://a4e911deda0e041e5b2cd2207d686a8f-661329308.us-east-1.elb.amazonaws.com/apm) | 80 |
+
+---
+
+## 🏛️ 4. Detailed Architecture & Data Flow
 
 ```mermaid
 graph TD
-    User["User Browser (RUM)"] -->|Public ELB| Frontend["Frontend (Go/HTML)"]
+    User["User Browser (RUM)"] -->|Single Ingress LB| Ingress["NGINX Ingress Controller"]
     
-    subgraph "AWS EKS Cluster (3 Nodes)"
-        direction TB
-        
-        subgraph "Boutique Namespace"
-            Frontend -->|gRPC/HTTP| Services["Backend Services (.NET, Go, Python, Node.js)"]
-        end
-        
-        subgraph "Observability Stack"
-            Services -->|OTLP| OTelAgent["OTel Agent (DaemonSet)"]
-            OTelAgent -->|OTLP| OTelGateway["OTel Gateway (Deployment)"]
-            
-            OTelGateway -->|OTLP/HTTPS| APMServer["Elastic APM Server (ECK)"]
-            APMServer -->|Indexing| ES["Elasticsearch Cluster"]
-        end
-        
-        subgraph "Infrastructure Monitoring"
-            EAgent["Elastic Agent (DaemonSet)"] -->|Metrics/Logs| ES
-        end
-        
-        ES -->|Storage| EBS["AWS EBS Volumes (GP3)"]
+    Ingress -->|/| Frontend["Frontend (Go/HTML)"]
+    Ingress -->|/kibana| Kibana["Kibana (ECK)"]
+    Ingress -->|/apm| APMServer["APM Server (ECK)"]
+    
+    subgraph "AWS EKS Cluster"
+        Frontend -->|gRPC/HTTP| Services["Backend Services (.NET, Go, Python, Node.js)"]
+        Services -->|OTLP| OTelAgent["OTel Agent (DaemonSet)"]
+        OTelAgent -->|OTLP| OTelGateway["OTel Gateway (Deployment)"]
+        OTelGateway -->|OTLP/HTTPS| APMServer
+        APMServer -->|Indexing| ES["Elasticsearch Cluster"]
+        EAgent["Elastic Agent (DaemonSet)"] -->|Metrics/Logs| ES
     end
-    
-    Kibana["Kibana UI"] -->|Visualization| ES
-    APMServer -->|RUM Data| User
 ```
 
 ---
 
-## 💻 4. Deployment Instructions
+## 💻 5. Deployment Instructions
 
-### **1. Infrastructure Foundations**
+### **1. Infrastructure & Elastic Stack**
 - **Cluster**: `eksctl create cluster -f infrastructure/eks-cluster.yaml`
 - **ECK Operator**: `kubectl apply -f https://download.elastic.co/downloads/eck/2.11.1/operator.yaml`
 - **Elastic Stack**: `kubectl apply -f elastic-stack.yaml`
 
-### **2. Telemetry Pipeline**
+### **2. Ingress & Telemetry Pipeline**
+- **Ingress Controller**: `kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.8.2/deploy/static/provider/cloud/deploy.yaml`
 - **OTel Agent**: `helm upgrade --install otel-agent open-telemetry/opentelemetry-collector -f otel-collector/values-agent.yaml`
 - **OTel Gateway**: `helm upgrade --install otel-gateway open-telemetry/opentelemetry-collector -f otel-collector/values-gateway.yaml`
 
 ### **3. Application & RUM Patching**
-- **Boutique**: `kubectl apply -f microservices-demo/release/kubernetes-manifests.yaml`
 - **Instrumentation**: `kubectl apply -f infrastructure/patch-frontend-otel.yaml`
-- **RUM Agent**: `kubectl apply -f infrastructure/header-rum.html` (via ConfigMap)
+- **Frontend Ingress**: `kubectl apply -f infrastructure/frontend-ingress.yaml`
 
 ---
 
-## 💡 5. Business Value (Interview Talking Points)
-- **Unified Visibility:** One platform (Elastic) for logs, metrics, traces, and user experience.
-- **Vendor-Neutral:** By using **OpenTelemetry**, the instrumentation is portable. No "vendor lock-in."
-- **Efficiency:** Using **Spot Instances** and **OTel Tail-Sampling** significantly reduces cloud operational costs.
-- **Reliability:** Built-in alerting (integrated via `kibana-alerts.ndjson`) provides proactive notifications for health drops (<90%) or high error rates (>5%).
-
----
-
-## 📂 6. Documentation of Decisions
-Please refer to [DECISIONS.md](file:///c:/Users/AWS%20Community%20Day/OneDrive/Documentos/MTN-Accessment/DECISIONS.md) for a deep dive into why specific architectural paths were chosen over others.
+## 🔍 6. Section 3: Infrastructure Monitoring - How to Test
+- **Inventory & Hosts**: Go to **Observability → Infrastructure → Inventory** to see the EKS nodes.
+- **Database Metrics**: Search for **"Redis Overview"** in the Dashboards.
+- **Network flows**: Search for `event.dataset: "packetbeat.flow"` in Discover.
+- **Ingress Metrics**: Search for **"[Metrics Nginx] Overview"** in Dashboards.

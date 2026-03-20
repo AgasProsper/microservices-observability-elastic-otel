@@ -1,0 +1,39 @@
+# Binary files
+*.exe
+*.dll
+*.tar.gz*
+*.zip
+*.bin
+
+# Temporary/Query files
+query.json
+targeted_query.json
+dataview.json
+
+# Local Kubernetes/Cloud Config
+.kube/
+.aws/
+.eksctl/
+*kubeconfig*
+
+# OS Specific
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+
+# Sensitive environment variables
+.env
+*.pem
+*.key
+
+# Dependencies (Added by language-specific tools)
+node_modules/
+vendor/
+
+# Folders to ignore
+bin/
+linux-amd64/
+tmp/

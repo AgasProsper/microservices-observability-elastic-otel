@@ -13,8 +13,8 @@ data:
           - stubstatus
         period: 10s
         hosts:
-          - "http://ingress-nginx-controller.ingress-nginx.svc.cluster.local:80"
-        server_status_path: "/nginx_status"
+          - "http://ingress-nginx-controller.ingress-nginx.svc.cluster.local:10254"
+        server_status_path: "/metrics"
         enabled: true
 
     output.elasticsearch:

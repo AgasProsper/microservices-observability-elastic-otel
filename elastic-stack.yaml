@@ -33,11 +33,19 @@ spec:
   count: 1
   elasticsearchRef:
     name: quickstart
+  config:
+    server.basePath: "/kibana"
+    server.rewriteBasePath: true
+    xpack.security.secureCookies: false
   podTemplate:
     spec:
-
       containers:
       - name: kibana
+        readinessProbe:
+          httpGet:
+            path: /kibana/login
+            port: 5601
+            scheme: HTTPS
         resources:
           requests:
             memory: 512Mi
@@ -61,7 +69,7 @@ spec:
   http:
     service:
       spec:
-        type: LoadBalancer
+        type: ClusterIP
   podTemplate:
     spec:
 
